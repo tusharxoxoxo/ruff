@@ -1678,7 +1678,7 @@ elif b:
         let stmt = Stmt::parse(contents, "<filename>")?;
         let stmt = Stmt::as_if_stmt(&stmt).unwrap();
         let locator = Locator::new(contents);
-        let range = elif_else_range(stmt, &locator).unwrap();
+        let range = elif_else_range(&stmt.elif_else_clauses[0], &locator).unwrap();
         assert_eq!(range.start(), TextSize::from(14));
         assert_eq!(range.end(), TextSize::from(18));
 
@@ -1690,7 +1690,7 @@ else:
         let stmt = Stmt::parse(contents, "<filename>")?;
         let stmt = Stmt::as_if_stmt(&stmt).unwrap();
         let locator = Locator::new(contents);
-        let range = elif_else_range(stmt, &locator).unwrap();
+        let range = elif_else_range(&stmt.elif_else_clauses[0], &locator).unwrap();
         assert_eq!(range.start(), TextSize::from(14));
         assert_eq!(range.end(), TextSize::from(18));
 

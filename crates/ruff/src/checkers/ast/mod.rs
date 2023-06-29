@@ -1298,7 +1298,7 @@ where
             Stmt::If(ast::StmtIf {
                 test,
                 body,
-                orelse,
+                elif_else_clauses,
                 range: _,
             }) => {
                 if self.enabled(Rule::IfTuple) {
@@ -1310,16 +1310,12 @@ where
                         stmt,
                         test,
                         body,
-                        orelse,
+                        elif_else_clauses,
                         self.semantic.stmt_parent(),
                     );
                 }
                 if self.enabled(Rule::IfWithSameArms) {
-                    flake8_simplify::rules::if_with_same_arms(
-                        self,
-                        stmt,
-                        self.semantic.stmt_parent(),
-                    );
+                    flake8_simplify::rules::if_with_same_arms(self, stmt);
                 }
                 if self.enabled(Rule::NeedlessBool) {
                     flake8_simplify::rules::needless_bool(self, stmt);
@@ -1330,16 +1326,11 @@ where
                         stmt,
                         test,
                         body,
-                        orelse,
-                        self.semantic.stmt_parent(),
+                        elif_else_clauses,
                     );
                 }
                 if self.enabled(Rule::IfElseBlockInsteadOfIfExp) {
-                    flake8_simplify::rules::use_ternary_operator(
-                        self,
-                        stmt,
-                        self.semantic.stmt_parent(),
-                    );
+                    flake8_simplify::rules::use_ternary_operator(self, stmt);
                 }
                 if self.enabled(Rule::IfElseBlockInsteadOfDictGet) {
                     flake8_simplify::rules::use_dict_get_with_default(
@@ -1347,8 +1338,7 @@ where
                         stmt,
                         test,
                         body,
-                        orelse,
-                        self.semantic.stmt_parent(),
+                        elif_else_clauses,
                     );
                 }
                 if self.enabled(Rule::TypeCheckWithoutTypeError) {
@@ -1356,16 +1346,21 @@ where
                         self,
                         body,
                         test,
-                        orelse,
+                        elif_else_clauses,
                         self.semantic.stmt_parent(),
                     );
                 }
                 if self.enabled(Rule::OutdatedVersionBlock) {
-                    pyupgrade::rules::outdated_version_block(self, stmt, test, body, orelse);
+                    pyupgrade::rules::outdated_version_block(
+                        self,
+                        stmt,
+                        test,
+                        body,
+                        elif_else_clauses,
+                    );
                 }
                 if self.enabled(Rule::CollapsibleElseIf) {
-                    if let Some(diagnostic) =
-                        pylint::rules::collapsible_else_if(orelse, self.locator)
+                    if let Some(diagnostic) = pylint::rules::collapsible_else_if(elif_else_clauses)
                     {
                         self.diagnostics.push(diagnostic);
                     }
@@ -1993,7 +1988,7 @@ where
                 stmt_if @ ast::StmtIf {
                     test,
                     body,
-                    orelse,
+                    elif_else_clauses,
                     range: _,
                 },
             ) => {
@@ -2012,7 +2007,12 @@ where
                     self.visit_body(body);
                 }
 
-                self.visit_body(orelse);
+                for clause in elif_else_clauses {
+                    if let Some(test) = &clause.test {
+                        self.visit_expr(test);
+                    }
+                    self.visit_body(&clause.body);
+                }
             }
             _ => visitor::walk_stmt(self, stmt),
         };
