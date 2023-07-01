@@ -306,6 +306,50 @@ fn find_last_nested_if(body: &[Stmt]) -> Option<(&Expr, &Stmt)> {
     })
 }
 
+pub(crate) fn is_nested_if_statements<'a>(
+    stmt: &Stmt,
+    test: &Expr,
+    body: &'a [Stmt],
+    elif_else_clauses: &'a [ElifElseClause],
+) -> Option<(&'a [Stmt], TextRange)> {
+    // If must be last condition, otherwise there could be another `elif` or `else` that only
+    // depends on the outer of the two conditions
+    let (test, body, range) = if let Some(clause) = elif_else_clauses.last() {
+        if let Some(test) = &clause.test {
+            (test, clause.body.as_slice(), clause.range())
+        } else {
+            // The last condition is an `else`
+            return None;
+        }
+    } else {
+        (test, body, stmt.range())
+    };
+
+    // The nested if must be the only child, otherwise there is at least one more statement that
+    // only depends on the outer condition
+    if body.len() > 1 {
+        return None;
+    }
+
+    // Allow `if __name__ == "__main__":` statements.
+    if is_main_check(test) {
+        return None;
+    }
+
+    // Allow `if True:` and `if False:` statements.
+    if matches!(
+        test,
+        Expr::Constant(ast::ExprConstant {
+            value: Constant::Bool(..),
+            ..
+        })
+    ) {
+        return None;
+    }
+
+    Some((body, range))
+}
+
 /// SIM102
 pub(crate) fn nested_if_statements(
     checker: &mut Checker,
@@ -317,51 +361,23 @@ pub(crate) fn nested_if_statements(
 ) {
     // If the parent could contain a nested if-statement, abort.
     // TODO(konstin): fix this
-    if let Some(Stmt::If(ast::StmtIf {
-        body,
-        elif_else_clauses,
-        ..
-    })) = parent
-    {
-        if elif_else_clauses.is_empty() && body.len() == 1 {
-            return;
-        }
-    }
-
-    // If must be last condition, otherwise there could be another `elif` or `else` that only
-    // depends on the outer of the two conditions
-    let (test, body, range, is_elif) = if let Some(clause) = elif_else_clauses.last() {
-        if let Some(test) = &clause.test {
-            (test, clause.body.as_slice(), clause.range(), true)
-        } else {
-            // There is an `else`
-            return;
-        }
-    } else {
-        (test, body, stmt.range(), false)
-    };
-
-    // The nested if must be the only child, otherwise there is at least one more statement that
-    // only depends on the outer condition
-    if body.len() > 1 {
-        return;
-    }
-
-    // Allow `if __name__ == "__main__":` statements.
-    if is_main_check(test) {
-        return;
-    }
-
-    // Allow `if True:` and `if False:` statements.
-    if matches!(
-        test,
-        Expr::Constant(ast::ExprConstant {
-            value: Constant::Bool(..),
+    if let Some(parent) = parent {
+        if let Stmt::If(ast::StmtIf {
+            test,
+            body,
+            elif_else_clauses,
             ..
-        })
-    ) {
-        return;
+        }) = parent
+        {
+            if is_nested_if_statements(parent, test, body, elif_else_clauses).is_some() {
+                return;
+            }
+        }
     }
+
+    let Some((body, range)) = is_nested_if_statements(stmt, test, body, elif_else_clauses) else {
+        return;
+    };
 
     // Find the deepest nested if-statement, to inform the range.
     let Some((test, first_stmt)) = find_last_nested_if(body) else {
@@ -388,8 +404,7 @@ pub(crate) fn nested_if_statements(
             TextRange::new(range.start(), nested_if.start()),
             checker.locator,
         ) {
-            match fix_if::fix_nested_if_statements(checker.locator, checker.stylist, range, is_elif)
-            {
+            match fix_if::fix_nested_if_statements(checker.locator, checker.stylist, range) {
                 Ok(edit) => {
                     if edit
                         .content()
