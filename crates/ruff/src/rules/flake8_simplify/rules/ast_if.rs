@@ -312,13 +312,13 @@ pub(crate) fn is_nested_if_statements<'a>(
     body: &'a [Stmt],
     elif_else_clauses: &'a [ElifElseClause],
 ) -> Option<(&'a [Stmt], TextRange)> {
-    // If must be last condition, otherwise there could be another `elif` or `else` that only
+    // It must be the last condition, otherwise there could be another `elif` or `else` that only
     // depends on the outer of the two conditions
     let (test, body, range) = if let Some(clause) = elif_else_clauses.last() {
         if let Some(test) = &clause.test {
             (test, clause.body.as_slice(), clause.range())
         } else {
-            // The last condition is an `else`
+            // The last condition is an `else` (different rule)
             return None;
         }
     } else {
@@ -360,7 +360,6 @@ pub(crate) fn nested_if_statements(
     parent: Option<&Stmt>,
 ) {
     // If the parent could contain a nested if-statement, abort.
-    // TODO(konstin): fix this
     if let Some(parent) = parent {
         if let Stmt::If(ast::StmtIf {
             test,
