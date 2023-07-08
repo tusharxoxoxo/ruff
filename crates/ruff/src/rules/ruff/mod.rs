@@ -210,7 +210,7 @@ mod tests {
         let messages = lint_pyproject_toml(
             source_file,
             &settings::Settings::for_rule(Rule::InvalidPyprojectToml),
-        )?;
+        );
         assert_messages!(snapshot, messages);
         Ok(())
     }
