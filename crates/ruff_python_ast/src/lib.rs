@@ -14,6 +14,7 @@ pub mod source_code;
 pub mod statement_visitor;
 pub mod str;
 pub mod token_kind;
+pub mod traversal;
 pub mod types;
 pub mod typing;
 pub mod visitor;
