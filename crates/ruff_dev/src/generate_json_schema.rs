@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 use anyhow::{bail, Result};
 use pretty_assertions::StrComparison;
+use schemars::schema::Schema;
 use schemars::schema_for;
 
 use ruff::settings::options::Options;
@@ -20,7 +21,17 @@ pub(crate) struct Args {
 }
 
 pub(crate) fn main(args: &Args) -> Result<()> {
-    let schema = schema_for!(Options);
+    let mut schema = schema_for!(Options);
+    // Remove RUF014 since it's not present without the off-by-default feature `unreachable-code`
+    if let Some(Schema::Object(schema_object)) = &mut schema.definitions.get_mut("RuleSelector") {
+        schema_object
+            .enum_values
+            .as_mut()
+            .unwrap()
+            .retain(|field| field.as_str().unwrap() != "RUF014");
+    } else {
+        unreachable!();
+    }
     let schema_string = serde_json::to_string_pretty(&schema).unwrap();
     let filename = "ruff.schema.json";
     let schema_path = PathBuf::from(ROOT_DIR).join(filename);
@@ -61,7 +72,7 @@ mod tests {
 
     use super::{main, Args};
 
-    #[cfg_attr(not(feature = "unreachable-code"), test)]
+    #[test]
     fn test_generate_json_schema() -> Result<()> {
         let mode = if env::var("RUFF_UPDATE_SCHEMA").as_deref() == Ok("1") {
             Mode::Write
