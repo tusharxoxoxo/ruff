@@ -2114,7 +2114,7 @@ mod tests {
         try: pass
         except Exception as fu: pass
         "#,
-            &[Rule::UnusedVariable, Rule::RedefinedWhileUnused],
+            &[Rule::RedefinedWhileUnused, Rule::UnusedVariable],
         );
     }
 
