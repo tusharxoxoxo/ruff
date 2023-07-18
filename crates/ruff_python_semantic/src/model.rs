@@ -195,6 +195,7 @@ impl<'a> SemanticModel<'a> {
         self.bindings.push(Binding {
             range: TextRange::default(),
             kind: BindingKind::Builtin,
+            scope: ScopeId::global(),
             references: Vec::new(),
             flags: BindingFlags::empty(),
             source: None,
@@ -215,6 +216,7 @@ impl<'a> SemanticModel<'a> {
             kind,
             flags,
             references: Vec::new(),
+            scope: self.scope_id,
             source: self.stmt_id,
             context: self.execution_context(),
             exceptions: self.exceptions(),
@@ -806,6 +808,7 @@ impl<'a> SemanticModel<'a> {
                     kind: BindingKind::Assignment,
                     range: *range,
                     references: Vec::new(),
+                    scope: self.scope_id,
                     source: self.stmt_id,
                     context: self.execution_context(),
                     exceptions: self.exceptions(),
