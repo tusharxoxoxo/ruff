@@ -2,10 +2,11 @@ use ruff_text_size::{TextRange, TextSize};
 use rustpython_parser::ast::Ranged;
 
 use ruff_formatter::{format_args, write, Argument, Arguments};
+use ruff_python_whitespace::{SimpleTokenizer, Token, TokenKind};
 
 use crate::context::NodeLevel;
 use crate::prelude::*;
-use crate::trivia::{lines_after, skip_trailing_trivia, SimpleTokenizer, Token, TokenKind};
+use crate::trivia::{lines_after, skip_trailing_trivia};
 use crate::MagicTrailingComma;
 
 /// Adds parentheses and indents `content` if it doesn't fit on a line.

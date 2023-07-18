@@ -4086,7 +4086,7 @@ where
                     if self.patch(Rule::UnusedVariable) {
                         diagnostic.try_set_fix(|| {
                             pyflakes::fixes::remove_exception_handler_assignment(
-                                except_handler,
+                                name.range(),
                                 self.locator,
                             )
                             .map(Fix::automatic)
